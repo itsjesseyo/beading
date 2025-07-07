@@ -71,34 +71,228 @@
             z-index: 10;
         }
         
-        .controls {
+        .main-controls {
             text-align: center;
-            margin-top: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
         }
         
-        .controls label {
-            margin: 0 10px;
-            color: #333;
-            font-weight: bold;
+        .control-section {
+            margin: 15px 0;
+            padding: 15px 0;
         }
         
-        .controls input[type="checkbox"] {
-            margin-right: 5px;
+        .control-section:not(:last-child) {
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .control-section h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .grid-size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .grid-size-control label {
+            font-weight: 600;
+            color: #495057;
+            margin: 0;
+        }
+        
+        
+        .grid-size-slider {
+            width: 120px;
+        }
+        
+        .checkbox-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+        }
+        
+        .checkbox-control:hover {
+            border-color: #007bff;
+        }
+        
+        .checkbox-control input[type="checkbox"] {
+            margin: 0;
+            transform: scale(1.2);
+        }
+        
+        .checkbox-control label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #495057;
         }
         
         button {
             background: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
-            margin: 0 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         button:hover {
             background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            font-size: 16px;
+            padding: 14px 28px;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 6px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #dee2e6;
+            transition: all 0.2s;
+        }
+        
+        .btn-icon:hover {
+            background: #e9ecef;
+            color: #495057;
+            border-color: #adb5bd;
+            transform: scale(1.1);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .advanced-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .advanced-section h3 {
+            margin: 0 0 15px 0;
+            color: #856404;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .mode-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-left: 10px;
+        }
+        
+        .mode-lens {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+        
+        .mode-perspective {
+            background: #ffe7e7;
+            color: #cc0000;
+        }
+        
+        .advanced-controls {
+            display: none;
+        }
+        
+        .advanced-controls.show {
+            display: block;
+        }
+        
+        .advanced-tool {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .advanced-tool h5 {
+            margin: 0 0 10px 0;
+            color: #495057;
+            font-size: 14px;
+        }
+        
+        .advanced-tool p {
+            margin: 0 0 10px 0;
+            font-size: 13px;
+            color: #6c757d;
         }
         
         .info {
@@ -117,15 +311,21 @@
         .upload-label {
             background: #28a745;
             color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
             display: inline-block;
-            margin: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-decoration: none;
         }
         
         .upload-label:hover {
             background: #218838;
+            transform: translateY(-1px);
         }
         
         .canvas-wrapper {
@@ -138,31 +338,67 @@
     <div class="container">
         <h1>Pixelated Beading Pattern Generator</h1>
         
-        <div class="controls">
-            <label for="fileInput" class="upload-label">Upload Your Image</label>
-            <input type="file" id="fileInput" accept="image/*">
-            <button onclick="downloadPattern()">Download Pattern</button>
+        <div class="main-controls">
+            <div class="control-section">
+                <h4>Start Here</h4>
+                <div class="control-group">
+                    <label for="fileInput" class="upload-label btn-success">📁 Upload Your Image</label>
+                    <input type="file" id="fileInput" accept="image/*">
+                    <button onclick="downloadPattern()" class="btn-primary">💾 Download Pattern</button>
+                </div>
+            </div>
+            
+            <div class="control-section">
+                <h4>Pattern Settings</h4>
+                <div class="control-group">
+                    <div class="grid-size-control">
+                        <label>Grid Size:</label>
+                        <span id="gridSizeValue2">60</span>
+                        <span>×</span>
+                        <span id="gridSizeValue">60</span>
+                        <input type="range" id="gridSize" class="grid-size-slider" min="8" max="80" value="60" oninput="updateGridSize()">
+                    </div>
+                    
+                    <div class="checkbox-control">
+                        <input type="checkbox" id="circularCrop" checked>
+                        <label for="circularCrop">🔵 Crop to Circle</label>
+                    </div>
+                    
+                    <button id="advancedBtn" onclick="toggleAdvanced()" class="btn-icon" title="Advanced Tools: Perspective & lens distortion correction for photos taken at angles or with camera distortion">⚙️</button>
+                </div>
+                <span id="modeIndicator" class="mode-indicator" style="display: none;"></span>
+            </div>
         </div>
         
-        <div class="controls">
-            <label>
-                <input type="checkbox" id="circularCrop" checked> Crop to Circle
-            </label>
-            <label>
-                Grid Size: <input type="range" id="gridSize" min="8" max="80" value="60" oninput="updateGridSize()">
-                <span id="gridSizeValue">60</span>x<span id="gridSizeValue2">60</span>
-            </label>
-            <button id="lensBtn" onclick="toggleLensCorrection()" disabled>Fix Lens Distortion</button>
-            <div id="lensControls" style="display: none; margin-top: 10px;">
-                <p style="margin: 5px 0; font-size: 14px; color: #666;">
-                    Drag grid points to outline the rectangle you want to extract and straighten
-                </p>
-                <button onclick="applyGridCorrection()">Apply Correction</button>
-                <button onclick="resetLensCorrection()">Reset Grid</button>
+        <div id="advancedSection" class="advanced-section advanced-controls">
+            <h3>🔧 Advanced Image Correction Tools</h3>
+            
+            <div class="advanced-tool">
+                <h5>📐 Perspective Correction</h5>
+                <p>Fix photos taken at an angle by selecting 4 corners of your subject</p>
+                <div class="control-group">
+                    <button id="perspectiveBtn" onclick="togglePerspectiveMode()" disabled>Upload image first</button>
+                    <button id="correctBtn" onclick="correctPerspective()" disabled style="display: none;" class="btn-success">Apply Correction</button>
+                    <button id="resetBtn" onclick="resetPerspective()" disabled style="display: none;" class="btn-danger">Reset</button>
+                </div>
             </div>
-            <button id="perspectiveBtn" onclick="togglePerspectiveMode()" disabled>Enable Perspective Correction</button>
-            <button id="correctBtn" onclick="correctPerspective()" disabled style="display: none;">Correct Perspective</button>
-            <button id="resetBtn" onclick="resetPerspective()" disabled style="display: none;">Reset</button>
+            
+            <div class="advanced-tool">
+                <h5>🔍 Lens Distortion Correction</h5>
+                <p>Fix barrel/pincushion distortion by dragging grid points to outline a rectangle</p>
+                <div class="control-group">
+                    <button id="lensBtn" onclick="toggleLensCorrection()" disabled>Upload image first</button>
+                </div>
+                <div id="lensControls" style="display: none; margin-top: 10px;">
+                    <p style="margin: 5px 0; font-size: 13px; color: #666;">
+                        Drag the grid points to outline the rectangle you want to extract and straighten
+                    </p>
+                    <div class="control-group">
+                        <button onclick="applyGridCorrection()" class="btn-success">Apply Correction</button>
+                        <button onclick="resetLensCorrection()" class="btn-secondary">Reset Grid</button>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="canvas-container">
@@ -205,6 +441,9 @@
         const correctBtn = document.getElementById('correctBtn');
         const resetBtn = document.getElementById('resetBtn');
         const perspectivePoints = document.getElementById('perspectivePoints');
+        const advancedBtn = document.getElementById('advancedBtn');
+        const advancedSection = document.getElementById('advancedSection');
+        const modeIndicator = document.getElementById('modeIndicator');
         
         // Global variables
         let currentImageData = null;
@@ -243,6 +482,27 @@
                 processImage();
             }
         }
+        
+        function toggleAdvanced() {
+            const isVisible = advancedSection.classList.contains('show');
+            if (isVisible) {
+                advancedSection.classList.remove('show');
+                advancedBtn.textContent = '⚙️';
+                advancedBtn.title = 'Advanced Tools: Perspective & lens distortion correction for photos taken at angles or with camera distortion';
+                
+                // Exit any active modes
+                if (perspectiveMode) {
+                    togglePerspectiveMode();
+                }
+                if (lensMode) {
+                    toggleLensCorrection();
+                }
+            } else {
+                advancedSection.classList.add('show');
+                advancedBtn.textContent = '✖️';
+                advancedBtn.title = 'Hide Advanced Tools';
+            }
+        }
 
         function handleFileUpload(e) {
             const file = e.target.files[0];
@@ -262,7 +522,9 @@
                         updateUI();
                         processImage();
                         perspectiveBtn.disabled = false;
+                        perspectiveBtn.textContent = 'Enable Perspective Mode';
                         lensBtn.disabled = false;
+                        lensBtn.textContent = 'Enable Lens Correction';
                     };
                     img.src = e.target.result;
                 };
@@ -547,10 +809,15 @@
                 circularCropCheckbox.disabled = true;
                 lensBtn.disabled = true;
                 
+                // Show mode indicator
+                modeIndicator.textContent = 'Perspective Mode';
+                modeIndicator.className = 'mode-indicator mode-perspective';
+                modeIndicator.style.display = 'inline-block';
+                
                 if (selectedPoints.length === 4) {
                     correctBtn.style.display = 'inline-block';
                     correctBtn.disabled = false;
-                    originalTitle.textContent = 'Original - Click "Correct Perspective" to apply';
+                    originalTitle.textContent = 'Original - Click "Apply Correction" to apply';
                 } else {
                     correctBtn.style.display = 'none';
                     correctBtn.disabled = true;
@@ -561,17 +828,26 @@
                 lensControls.style.display = 'block';
                 perspectiveBtn.disabled = true;
                 circularCropCheckbox.disabled = true;
+                
+                // Show mode indicator
+                modeIndicator.textContent = 'Lens Correction';
+                modeIndicator.className = 'mode-indicator mode-lens';
+                modeIndicator.style.display = 'inline-block';
+                
                 originalTitle.textContent = 'Lens Correction - Drag grid to outline the rectangle, then click Apply';
             } else {
                 originalCanvas.classList.remove('perspective-mode');
-                perspectiveBtn.textContent = 'Enable Perspective Correction';
-                lensBtn.textContent = 'Fix Lens Distortion';
+                perspectiveBtn.textContent = 'Enable Perspective Mode';
+                lensBtn.textContent = 'Enable Lens Correction';
                 correctBtn.style.display = 'none';
                 resetBtn.style.display = 'none';
                 lensControls.style.display = 'none';
                 circularCropCheckbox.disabled = false;
                 perspectiveBtn.disabled = false;
                 lensBtn.disabled = false;
+                
+                // Hide mode indicator
+                modeIndicator.style.display = 'none';
                 
                 if (originalImageData || lensImageData) {
                     originalTitle.textContent = useCircularCrop ? "Corrected (Cropped to Circle)" : "Corrected";
