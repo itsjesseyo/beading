@@ -51,11 +51,39 @@
             border: 2px solid #333;
             border-radius: 5px;
             background: white;
+            cursor: crosshair;
+        }
+        
+        .perspective-mode {
+            border-color: #ff6b6b !important;
+            box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+        }
+        
+        .perspective-point {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #ff6b6b;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 10;
         }
         
         .controls {
             text-align: center;
             margin-top: 20px;
+        }
+        
+        .controls label {
+            margin: 0 10px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .controls input[type="checkbox"] {
+            margin-right: 5px;
         }
         
         button {
@@ -99,6 +127,11 @@
         .upload-label:hover {
             background: #218838;
         }
+        
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+        }
     </style>
 </head>
 <body>
@@ -111,10 +144,22 @@
             <button onclick="downloadPattern()">Download Pattern</button>
         </div>
         
+        <div class="controls">
+            <label>
+                <input type="checkbox" id="circularCrop" checked> Crop to Circle
+            </label>
+            <button id="perspectiveBtn" onclick="togglePerspectiveMode()" disabled>Enable Perspective Correction</button>
+            <button id="correctBtn" onclick="correctPerspective(); console.log('Correct button clicked!');" disabled style="display: none;">Correct Perspective</button>
+            <button id="resetBtn" onclick="resetPerspective()" disabled style="display: none;">Reset</button>
+        </div>
+        
         <div class="canvas-container">
             <div class="canvas-section">
-                <h3>Original (Cropped to Circle)</h3>
-                <canvas id="originalCanvas" width="300" height="300"></canvas>
+                <h3 id="originalTitle">Original</h3>
+                <div class="canvas-wrapper">
+                    <canvas id="originalCanvas"></canvas>
+                    <div id="perspectivePoints"></div>
+                </div>
             </div>
             
             <div class="canvas-section">
@@ -124,61 +169,282 @@
         </div>
         
         <div class="info">
-            <p><strong>Instructions:</strong> Upload your circular image to create a 60x60 pixelated beading pattern. The grid overlay will help you count beads for your project!</p>
-            <p>Each square represents one bead. The pattern is optimized for circular beading projects.</p>
+            <p><strong>Instructions:</strong> Upload your image to create a 60x60 pixelated beading pattern. Toggle the "Crop to Circle" option for circular or rectangular patterns. Use "Enable Perspective Correction" to fix distorted images by clicking 4 corners of what should be a rectangle or square.</p>
+            <p>Each square represents one bead. Perfect for both circular and square beading projects.</p>
         </div>
     </div>
 
     <script>
+        // Get DOM elements
         const fileInput = document.getElementById('fileInput');
+        const circularCropCheckbox = document.getElementById('circularCrop');
         const originalCanvas = document.getElementById('originalCanvas');
         const pixelatedCanvas = document.getElementById('pixelatedCanvas');
         const originalCtx = originalCanvas.getContext('2d');
         const pixelatedCtx = pixelatedCanvas.getContext('2d');
+        const originalTitle = document.getElementById('originalTitle');
+        const perspectiveBtn = document.getElementById('perspectiveBtn');
+        const correctBtn = document.getElementById('correctBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const perspectivePoints = document.getElementById('perspectivePoints');
         
+        // Global variables
         let currentImageData = null;
+        let currentImage = null;
+        let originalImageData = null;
+        let perspectiveMode = false;
+        let selectedPoints = [];
 
-        fileInput.addEventListener('change', function(e) {
+        // Event listeners
+        fileInput.addEventListener('change', handleFileUpload);
+        circularCropCheckbox.addEventListener('change', handleCropToggle);
+        originalCanvas.addEventListener('click', handleCanvasClick);
+
+        function handleFileUpload(e) {
             const file = e.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        processImage(img);
+                        currentImage = img;
+                        originalImageData = null;
+                        
+                        // Only reset perspective mode if not currently in it
+                        if (!perspectiveMode) {
+                            selectedPoints = [];
+                            clearPerspectivePoints();
+                        }
+                        
+                        updateUI();
+                        processImage();
+                        perspectiveBtn.disabled = false;
                     };
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             }
-        });
+        }
 
-        function processImage(img) {
-            // Clear canvases
+        function handleCropToggle() {
+            if (currentImage && !perspectiveMode) {
+                processImage();
+            }
+        }
+
+        function handleCanvasClick(e) {
+            console.log('=== CANVAS CLICKED ===');
+            console.log('Perspective mode:', perspectiveMode);
+            console.log('Selected points length:', selectedPoints.length);
+            
+            if (perspectiveMode && selectedPoints.length < 4) {
+                const rect = originalCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                console.log('Click coordinates:', x, y);
+                
+                selectedPoints.push({x, y});
+                addPerspectivePoint(x, y, selectedPoints.length);
+                updateUI();
+                
+                console.log('Point added. Total points:', selectedPoints.length);
+            } else {
+                console.log('Click ignored - not in perspective mode or already have 4 points');
+            }
+        }
+
+        function setCanvasSize() {
+            if (!currentImage) return;
+
+            if (perspectiveMode) {
+                // In perspective mode: resize canvas to show full image
+                const maxSize = 400;
+                const imgAspect = currentImage.width / currentImage.height;
+                
+                let canvasWidth, canvasHeight;
+                if (imgAspect > 1) {
+                    // Landscape
+                    canvasWidth = Math.min(maxSize, currentImage.width);
+                    canvasHeight = canvasWidth / imgAspect;
+                } else {
+                    // Portrait or square
+                    canvasHeight = Math.min(maxSize, currentImage.height);
+                    canvasWidth = canvasHeight * imgAspect;
+                }
+                
+                originalCanvas.width = canvasWidth;
+                originalCanvas.height = canvasHeight;
+            } else {
+                // Normal mode: fixed 300x300 square
+                originalCanvas.width = 300;
+                originalCanvas.height = 300;
+            }
+        }
+
+        function processImage() {
+            console.log('=== PROCESS IMAGE STARTED ===');
+            console.log('Current image:', currentImage);
+            console.log('Original image data:', originalImageData);
+            console.log('Perspective mode:', perspectiveMode);
+            
+            if (!currentImage) return;
+
+            // Set canvas size based on current mode
+            setCanvasSize();
+            
+            // Clear both canvases
             originalCtx.clearRect(0, 0, originalCanvas.width, originalCanvas.height);
             pixelatedCtx.clearRect(0, 0, pixelatedCanvas.width, pixelatedCanvas.height);
             
-            // Draw original image cropped to circle
-            drawCircularImage(originalCtx, img, 300, 300);
+            let imageToProcess = currentImage;
             
-            // Create pixelated version
-            createPixelatedPattern(img);
+            // Use corrected image if available
+            if (originalImageData) {
+                console.log('Using corrected image data');
+                // Convert ImageData back to a canvas that can be used as an image
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = originalImageData.width;
+                tempCanvas.height = originalImageData.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.putImageData(originalImageData, 0, 0);
+                imageToProcess = tempCanvas;
+                console.log('Created canvas from ImageData:', tempCanvas.width, 'x', tempCanvas.height);
+            } else {
+                console.log('Using original image');
+            }
+            
+            // Draw the original image
+            console.log('Drawing original image...');
+            drawOriginalImage(imageToProcess);
+            
+            // Create pixelated pattern (always show, even in perspective mode for preview)
+            console.log('Creating pixelated pattern...');
+            createPixelatedPattern(imageToProcess);
+            
+            console.log('=== PROCESS IMAGE COMPLETED ===');
         }
 
-        function drawCircularImage(ctx, img, width, height) {
-            ctx.save();
+        function drawOriginalImage(img) {
+            if (perspectiveMode) {
+                // In perspective mode: draw image to fill entire canvas (canvas sized to image aspect ratio)
+                originalCtx.drawImage(img, 0, 0, originalCanvas.width, originalCanvas.height);
+            } else {
+                // Normal mode: apply crop settings
+                const useCircularCrop = circularCropCheckbox.checked;
+                if (useCircularCrop) {
+                    drawCircularImage(img);
+                } else {
+                    drawFittedImage(img);
+                }
+            }
+        }
+
+        function drawCircularImage(img) {
+            originalCtx.save();
             
-            // Create circular clipping path
-            const centerX = width / 2;
-            const centerY = height / 2;
-            const radius = Math.min(width, height) / 2;
+            const centerX = originalCanvas.width / 2;
+            const centerY = originalCanvas.height / 2;
+            const radius = Math.min(originalCanvas.width, originalCanvas.height) / 2;
             
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.clip();
+            originalCtx.beginPath();
+            originalCtx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            originalCtx.clip();
             
-            // Calculate aspect ratio and draw image
-            const imgAspect = img.width / img.height;
+            drawFittedImage(img);
+            originalCtx.restore();
+        }
+
+        function drawFittedImage(img) {
+            // Handle both Image objects and Canvas objects
+            let imgWidth, imgHeight;
+            if (img.width !== undefined) {
+                imgWidth = img.width;
+                imgHeight = img.height;
+            } else {
+                // Fallback for canvas objects
+                imgWidth = img.videoWidth || img.naturalWidth || originalCanvas.width;
+                imgHeight = img.videoHeight || img.naturalHeight || originalCanvas.height;
+            }
+            
+            const imgAspect = imgWidth / imgHeight;
+            const canvasAspect = originalCanvas.width / originalCanvas.height;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            // Crop to fill (zoom to fill entire canvas)
+            if (imgAspect > canvasAspect) {
+                drawHeight = originalCanvas.height;
+                drawWidth = drawHeight * imgAspect;
+                drawX = (originalCanvas.width - drawWidth) / 2;
+                drawY = 0;
+            } else {
+                drawWidth = originalCanvas.width;
+                drawHeight = drawWidth / imgAspect;
+                drawX = 0;
+                drawY = (originalCanvas.height - drawHeight) / 2;
+            }
+            
+            originalCtx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        }
+
+        function createPixelatedPattern(img) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = 60;
+            tempCanvas.height = 60;
+            
+            const useCircularCrop = circularCropCheckbox.checked;
+            
+            if (useCircularCrop) {
+                // Draw circular version for pixelation
+                tempCtx.save();
+                const radius = 30;
+                tempCtx.beginPath();
+                tempCtx.arc(30, 30, radius, 0, 2 * Math.PI);
+                tempCtx.clip();
+                drawImageToFit(tempCtx, img, 60, 60);
+                tempCtx.restore();
+            } else {
+                drawImageToFit(tempCtx, img, 60, 60);
+            }
+            
+            const imageData = tempCtx.getImageData(0, 0, 60, 60);
+            currentImageData = imageData;
+            
+            // Draw pixelated version
+            const pixelSize = 10;
+            for (let y = 0; y < 60; y++) {
+                for (let x = 0; x < 60; x++) {
+                    const index = (y * 60 + x) * 4;
+                    const r = imageData.data[index];
+                    const g = imageData.data[index + 1];
+                    const b = imageData.data[index + 2];
+                    const a = imageData.data[index + 3];
+                    
+                    if (a > 0) {
+                        pixelatedCtx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', ' + (a/255) + ')';
+                        pixelatedCtx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+                    }
+                }
+            }
+            
+            drawGrid();
+        }
+
+        function drawImageToFit(ctx, img, width, height) {
+            // Handle both Image objects and Canvas objects
+            let imgWidth, imgHeight;
+            if (img.width !== undefined) {
+                imgWidth = img.width;
+                imgHeight = img.height;
+            } else {
+                // Fallback for canvas objects
+                imgWidth = img.videoWidth || img.naturalWidth || width;
+                imgHeight = img.videoHeight || img.naturalHeight || height;
+            }
+            
+            const imgAspect = imgWidth / imgHeight;
             const canvasAspect = width / height;
             
             let drawWidth, drawHeight, drawX, drawY;
@@ -196,44 +462,6 @@
             }
             
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-            ctx.restore();
-        }
-
-        function createPixelatedPattern(img) {
-            // Create a temporary canvas for processing
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = 60;
-            tempCanvas.height = 60;
-            
-            // Draw the image as a circle on the temp canvas
-            drawCircularImage(tempCtx, img, 60, 60);
-            
-            // Get the image data
-            const imageData = tempCtx.getImageData(0, 0, 60, 60);
-            currentImageData = imageData;
-            
-            // Draw the pixelated version with grid
-            const pixelSize = 10; // 600px / 60 = 10px per pixel
-            
-            for (let y = 0; y < 60; y++) {
-                for (let x = 0; x < 60; x++) {
-                    const index = (y * 60 + x) * 4;
-                    const r = imageData.data[index];
-                    const g = imageData.data[index + 1];
-                    const b = imageData.data[index + 2];
-                    const a = imageData.data[index + 3];
-                    
-                    // Only draw if pixel is not transparent
-                    if (a > 0) {
-                        pixelatedCtx.fillStyle = `rgba(${r}, ${g}, ${b}, ${a/255})`;
-                        pixelatedCtx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
-                    }
-                }
-            }
-            
-            // Draw grid overlay
-            drawGrid();
         }
 
         function drawGrid() {
@@ -241,7 +469,6 @@
             pixelatedCtx.strokeStyle = '#333';
             pixelatedCtx.lineWidth = 1;
             
-            // Draw vertical lines
             for (let x = 0; x <= 60; x++) {
                 pixelatedCtx.beginPath();
                 pixelatedCtx.moveTo(x * pixelSize, 0);
@@ -249,13 +476,223 @@
                 pixelatedCtx.stroke();
             }
             
-            // Draw horizontal lines
             for (let y = 0; y <= 60; y++) {
                 pixelatedCtx.beginPath();
                 pixelatedCtx.moveTo(0, y * pixelSize);
                 pixelatedCtx.lineTo(600, y * pixelSize);
                 pixelatedCtx.stroke();
             }
+        }
+
+        function updateUI() {
+            const useCircularCrop = circularCropCheckbox.checked;
+            
+            if (perspectiveMode) {
+                originalCanvas.classList.add('perspective-mode');
+                perspectiveBtn.textContent = 'Exit Perspective Mode';
+                resetBtn.style.display = 'inline-block';
+                circularCropCheckbox.disabled = true;
+                
+                if (selectedPoints.length === 4) {
+                    correctBtn.style.display = 'inline-block';
+                    correctBtn.disabled = false;  // Enable the button!
+                    originalTitle.textContent = 'Original - Click "Correct Perspective" to apply';
+                } else {
+                    correctBtn.style.display = 'none';
+                    correctBtn.disabled = true;
+                    originalTitle.textContent = 'Original - Click ' + selectedPoints.length + '/4 corners';
+                }
+            } else {
+                originalCanvas.classList.remove('perspective-mode');
+                perspectiveBtn.textContent = 'Enable Perspective Correction';
+                correctBtn.style.display = 'none';
+                resetBtn.style.display = 'none';
+                circularCropCheckbox.disabled = false;
+                
+                if (originalImageData) {
+                    originalTitle.textContent = useCircularCrop ? "Corrected (Cropped to Circle)" : "Corrected";
+                } else {
+                    originalTitle.textContent = useCircularCrop ? "Original (Cropped to Circle)" : "Original";
+                }
+            }
+        }
+
+        function togglePerspectiveMode() {
+            perspectiveMode = !perspectiveMode;
+            selectedPoints = [];
+            clearPerspectivePoints();
+            updateUI();
+            processImage();
+        }
+
+        function addPerspectivePoint(x, y, number) {
+            const point = document.createElement('div');
+            point.className = 'perspective-point';
+            point.style.left = x + 'px';
+            point.style.top = y + 'px';
+            point.title = 'Point ' + number;
+            perspectivePoints.appendChild(point);
+        }
+
+        function clearPerspectivePoints() {
+            perspectivePoints.innerHTML = '';
+        }
+
+        function correctPerspective() {
+            console.log('=== CORRECT PERSPECTIVE STARTED ===');
+            console.log('Selected points:', selectedPoints);
+            console.log('Current image:', currentImage);
+            console.log('Perspective mode:', perspectiveMode);
+            
+            if (selectedPoints.length !== 4) {
+                alert('Please select exactly 4 corners');
+                return;
+            }
+
+            if (!currentImage) {
+                alert('No image loaded');
+                return;
+            }
+
+            console.log('Calling applyPerspectiveCorrection...');
+            const correctedImageData = applyPerspectiveCorrection();
+            console.log('Correction result:', correctedImageData);
+            
+            if (correctedImageData) {
+                console.log('Setting originalImageData and updating...');
+                originalImageData = correctedImageData;
+                
+                // Exit perspective mode
+                perspectiveMode = false;
+                selectedPoints = [];
+                clearPerspectivePoints();
+                
+                console.log('Calling updateUI...');
+                updateUI();
+                
+                console.log('Calling processImage...');
+                processImage();
+                
+                console.log('=== PERSPECTIVE CORRECTION COMPLETED ===');
+            } else {
+                console.log('Perspective correction failed - no data returned');
+                alert('Perspective correction failed. Please try selecting the corners again.');
+            }
+        }
+
+        function resetPerspective() {
+            originalImageData = null;
+            perspectiveMode = false;
+            selectedPoints = [];
+            clearPerspectivePoints();
+            updateUI();
+            processImage();
+        }
+
+        function applyPerspectiveCorrection() {
+            if (!currentImage || selectedPoints.length !== 4) {
+                console.log('Missing image or points:', currentImage, selectedPoints.length);
+                return null;
+            }
+
+            // Create source canvas with original image
+            const srcCanvas = document.createElement('canvas');
+            const srcCtx = srcCanvas.getContext('2d');
+            srcCanvas.width = currentImage.width;
+            srcCanvas.height = currentImage.height;
+            srcCtx.drawImage(currentImage, 0, 0);
+
+            // Convert click coordinates to image coordinates
+            const scaleX = currentImage.width / originalCanvas.width;
+            const scaleY = currentImage.height / originalCanvas.height;
+            
+            console.log('Canvas size:', originalCanvas.width, originalCanvas.height);
+            console.log('Image size:', currentImage.width, currentImage.height);
+            console.log('Scale factors:', scaleX, scaleY);
+            
+            const imagePoints = selectedPoints.map(point => ({
+                x: point.x * scaleX,
+                y: point.y * scaleY
+            }));
+
+            console.log('Original points:', selectedPoints);
+            console.log('Scaled points:', imagePoints);
+
+            // Calculate bounding box with some padding
+            let minX = Math.min(...imagePoints.map(p => p.x));
+            let maxX = Math.max(...imagePoints.map(p => p.x));
+            let minY = Math.min(...imagePoints.map(p => p.y));
+            let maxY = Math.max(...imagePoints.map(p => p.y));
+
+            // Add 10% padding to ensure we capture the full area
+            const paddingX = (maxX - minX) * 0.1;
+            const paddingY = (maxY - minY) * 0.1;
+            minX = Math.max(0, minX - paddingX);
+            maxX = Math.min(currentImage.width, maxX + paddingX);
+            minY = Math.max(0, minY - paddingY);
+            maxY = Math.min(currentImage.height, maxY + paddingY);
+
+            const width = Math.floor(maxX - minX);
+            const height = Math.floor(maxY - minY);
+
+            console.log('Bounding box:', minX, minY, maxX, maxY);
+            console.log('Output dimensions:', width, height);
+
+            if (width <= 10 || height <= 10) {
+                console.log('Output too small:', width, height);
+                alert('Selected area is too small. Please select a larger area.');
+                return null;
+            }
+
+            // Create destination canvas - make it a reasonable size
+            const destCanvas = document.createElement('canvas');
+            const destCtx = destCanvas.getContext('2d');
+            
+            // Use a standard size or maintain aspect ratio
+            const maxOutputSize = 800;
+            const outputAspect = width / height;
+            let outputWidth, outputHeight;
+            
+            if (outputAspect > 1) {
+                outputWidth = Math.min(maxOutputSize, width);
+                outputHeight = outputWidth / outputAspect;
+            } else {
+                outputHeight = Math.min(maxOutputSize, height);
+                outputWidth = outputHeight * outputAspect;
+            }
+            
+            destCanvas.width = Math.floor(outputWidth);
+            destCanvas.height = Math.floor(outputHeight);
+
+            console.log('Final output size:', destCanvas.width, destCanvas.height);
+
+            // Adjust points relative to bounding box
+            const adjustedPoints = imagePoints.map(point => ({
+                x: point.x - minX,
+                y: point.y - minY
+            }));
+
+            console.log('Adjusted points:', adjustedPoints);
+
+            // Simple approach: just crop and rotate the selected area
+            // For now, let's just extract the bounding box area
+            const cropCanvas = document.createElement('canvas');
+            const cropCtx = cropCanvas.getContext('2d');
+            cropCanvas.width = width;
+            cropCanvas.height = height;
+            
+            // Draw the cropped area
+            cropCtx.drawImage(
+                srcCanvas,
+                minX, minY, width, height,  // source rectangle
+                0, 0, width, height         // destination rectangle
+            );
+            
+            // Scale to final output size
+            destCtx.drawImage(cropCanvas, 0, 0, destCanvas.width, destCanvas.height);
+
+            console.log('Perspective correction completed');
+            return destCtx.getImageData(0, 0, destCanvas.width, destCanvas.height);
         }
 
         function downloadPattern() {
@@ -269,11 +706,6 @@
             link.href = pixelatedCanvas.toDataURL();
             link.click();
         }
-
-        // Load a default demonstration if no image is uploaded
-        window.onload = function() {
-            // You can add a default image here if needed
-        };
     </script>
 </body>
 </html>
